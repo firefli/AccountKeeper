@@ -2,6 +2,8 @@ package org.firefli.accountkeeper.model;
 
 import org.firefli.accountkeeper.security.EncryptionManager;
 
+import java.security.GeneralSecurityException;
+
 /**
  * Created by firefli on 11/29/14.
  */
@@ -18,14 +20,23 @@ public class Account {
         this.name = name;
     }
 
-    public byte[] getRawPassword() {
+    public boolean hasPassword() {
+        return ePass != null;
+    }
+
+    public char[] getPassword(EncryptionManager eManager) throws EncryptionManager.EncryptionManagerNeedsKeyException, GeneralSecurityException {
+        return eManager.decrypt(ePass);
+    }
+
+    public void setPassword(EncryptionManager eManager, char[] password) throws EncryptionManager.EncryptionManagerNeedsKeyException, GeneralSecurityException {
+        this.ePass = eManager.encrypt(password);
+    }
+
+    public byte[] getRawPwd() {
         return ePass;
     }
 
-    public char[] getPassword(EncryptionManager eManager) { return eManager.decrypt(ePass); }
-
-    public void setPassword(byte[] password) {
-        this.ePass = password;
+    public void setRawPwd(byte[] rawPwd) {
+        ePass = rawPwd;
     }
-
 }

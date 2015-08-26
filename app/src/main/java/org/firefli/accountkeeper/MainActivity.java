@@ -1,24 +1,34 @@
 package org.firefli.accountkeeper;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.FragmentManager;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import org.firefli.accountkeeper.model.Account;
+import org.firefli.accountkeeper.model.DefaultAccount;
+import org.firefli.accountkeeper.security.EncryptionManager;
+import org.firefli.accountkeeper.store.AccountStore;
 
+import java.security.GeneralSecurityException;
 import java.util.LinkedList;
 import java.util.List;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements View.OnClickListener, EnterPasswordDialog.EnterPasswordDialogListener {
 
     private List<Account> mAccountList;
+    private DefaultAccount defaultAccount;
+    private EncryptionManager eManager;
+    private Runnable onPwdReturn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,15 +36,12 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         initObjects();
         initLayout();
+        loadAccounts();
     }
 
     private void initObjects() {
         mAccountList = new LinkedList<Account>();
-        for(int i = 0; i < 10; i++) {
-            Account currAcct = new Account();
-            currAcct.setName("TEST_"+i);
-            mAccountList.add(currAcct);
-        }
+        eManager = new EncryptionManager();
     }
 
     private void initLayout() {
@@ -57,12 +64,14 @@ public class MainActivity extends Activity {
 
             @Override
             public View getView(int i, View view, ViewGroup viewGroup) {
-                if(view == null) {
+                if (view == null) {
                     view = getLayoutInflater().inflate(R.layout.account_item, null, false);
                 }
                 Account currAcct = mAccountList.get(i);
-                ((TextView)view.findViewById(R.id.textName)).setText(currAcct.getName());
-                ((TextView)view.findViewById(R.id.textPass)).setText("*****");
+                ((TextView) view.findViewById(R.id.textName)).setText(currAcct.getName());
+                ((TextView) view.findViewById(R.id.textPass)).setText("*****");
+                ((Button) view.findViewById(R.id.buttonShow)).setOnClickListener(MainActivity.this);
+                ((Button) view.findViewById(R.id.buttonShow)).setTag(currAcct);
                 return view;
             }
         });
@@ -81,12 +90,99 @@ public class MainActivity extends Activity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch(id) {
+            case R.id.action_add:
+                break;
+            case R.id.action_delete:
+                break;
+            case R.id.action_lock:
+                final MenuItem lockMenuItem = item;
+                if(eManager.hasKey()) {
+                    eManager.removeKey();
+                    lockMenuItem.setIcon(R.drawable.ic_lock_outline_white_24dp);
+                } else {
+                    showPwdDialog(new Runnable() {
+                        public void run() {
+                            if(defaultAccount.unlock(eManager)) {
+                                lockMenuItem.setIcon(R.drawable.ic_lock_open_white_24dp);
+                            } else {
+                                showPwdDialog(this);
+                            }
+                        }
+                    });
+                }
+                break;
+            case R.id.action_settings:
+                break;
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public void onClick(View view) {
+        if(view.getTag() instanceof Account) {
+           showAccountPwd((Account)view.getTag());
+        }
+    }
+
+    private void showPwdDialog(Runnable onPwdRetun) {
+        this.onPwdReturn = onPwdRetun;
+        FragmentManager fm = getFragmentManager();
+        EnterPasswordDialog pwdDialog = new EnterPasswordDialog();
+        pwdDialog.show(fm, "fragment_enter_pwd");
+    }
+
+    private void showAlertMessage(String alertMsg) {
+        new AlertDialog.Builder(this).setMessage(alertMsg).setTitle("Something is wrong!").create().show();
+    }
+
+    @Override
+    public void onFinishPwdDialog(char[] inputText) {
+        try {
+            eManager.setKey(inputText);
+        } catch(GeneralSecurityException e) {
+            showAlertMessage("Encryption failure.");
+        }
+        if(onPwdReturn != null) {
+            onPwdReturn.run();
+            onPwdReturn = null;
+        }
+    }
+
+    private void loadAccounts() {
+        try {
+            mAccountList.addAll(new AccountStore(this, eManager).pull());
+            for (Account acct : mAccountList) {
+                if (acct instanceof DefaultAccount) {
+                    defaultAccount = (DefaultAccount)acct;
+                }
+            }
+            mAccountList.remove(defaultAccount);
+        } catch (GeneralSecurityException e) {
+            e.printStackTrace();
+            showAlertMessage("Encryption failure!");
+        } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
+            showPwdDialog(new Runnable() {
+                public void run() {
+                    loadAccounts();
+                }
+            });
+        }
+    }
+
+    private void showAccountPwd(final Account acct) {
+        try {
+            acct.getPassword(eManager);
+        } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
+            showPwdDialog(new Runnable() {
+                public void run() {
+                    showAccountPwd(acct);
+                }
+            });
+        } catch (GeneralSecurityException e) {
+            showAlertMessage("Encryption failure.");
+        }
+    }
+
 }
