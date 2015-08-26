@@ -1,6 +1,5 @@
 package org.firefli.accountkeeper;
 
-import android.app.ActionBar;
 import android.app.DialogFragment;
 import android.os.Bundle;
 import android.text.Editable;
@@ -54,7 +53,7 @@ public class EnterPasswordDialog extends DialogFragment implements TextView.OnEd
             pwdEditable.getChars(0, pwdChars.length, pwdChars, 0);
             pwdEditable.clear();
             activity.onFinishPwdDialog(pwdChars);
-            dismiss();
+            this.dismiss();
             return true;
         }
         return false;

@@ -26,13 +26,3 @@ android {
         }
     }
 }
-
-apply plugin: 'android-unit-test'
-
-dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestCompile 'org.robolectric:robolectric:2.+'
-    androidTestCompile('junit:junit:4.10') {
-        exclude module: 'hamcrest-core'
-    }
-}

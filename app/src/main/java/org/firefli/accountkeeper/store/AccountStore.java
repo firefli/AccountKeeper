@@ -26,6 +26,7 @@ public class AccountStore {
     public Context mCtx;
     public EncryptionManager eManager;
 
+
     public AccountStore(Context ctx, EncryptionManager manager) {
         mCtx = ctx.getApplicationContext();
         eManager = manager;
@@ -79,6 +80,16 @@ public class AccountStore {
         List<Account> acctList = Arrays.asList(new Account[]{defaultAcct});
         store(acctList);
         return acctList;
+    }
+
+    public static boolean hasStore(Context ctx) {
+        return !ctx.getSharedPreferences(PREFS_NAME, 0).getAll().isEmpty();
+    }
+
+
+    public static void deleteStore(Context ctx) {
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, 0);
+        prefs.edit().clear().commit();
     }
 
 }

@@ -1,8 +1,5 @@
 package org.firefli.accountkeeper.security;
 
-import android.accounts.NetworkErrorException;
-import android.database.CharArrayBuffer;
-
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -13,7 +10,6 @@ import java.util.Arrays;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
-import javax.crypto.interfaces.PBEKey;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -29,7 +25,7 @@ public class EncryptionManager {
     private byte[] mSalt;
 
     /**
-     * Set the key to be used by the encryption manager.
+     * Set the key to be used by the encryption manager. Intensive.
      * @param key
      */
     public void setKey(char[] key) throws GeneralSecurityException {

@@ -3,6 +3,9 @@ package org.firefli.accountkeeper;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.FragmentManager;
+import android.app.ProgressDialog;
+import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -36,7 +39,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         setContentView(R.layout.activity_main);
         initObjects();
         initLayout();
-        loadAccounts();
+        //loadAccounts();
     }
 
     private void initObjects() {
@@ -113,6 +116,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
                 }
                 break;
             case R.id.action_settings:
+                startActivity(new Intent(this, SettingsActivity.class));
                 break;
         }
 
@@ -139,15 +143,8 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
 
     @Override
     public void onFinishPwdDialog(char[] inputText) {
-        try {
-            eManager.setKey(inputText);
-        } catch(GeneralSecurityException e) {
-            showAlertMessage("Encryption failure.");
-        }
-        if(onPwdReturn != null) {
-            onPwdReturn.run();
-            onPwdReturn = null;
-        }
+        new SetKeyTask(onPwdReturn).execute(inputText);
+        onPwdReturn = null;
     }
 
     private void loadAccounts() {
@@ -182,6 +179,34 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
             });
         } catch (GeneralSecurityException e) {
             showAlertMessage("Encryption failure.");
+        }
+    }
+
+    private class SetKeyTask extends AsyncTask<char[], Void, Void> {
+        private Runnable onPwdReturn;
+        private ProgressDialog progressIndicator;
+        public SetKeyTask(Runnable onPwdReturn) {
+            super();
+            this.onPwdReturn = onPwdReturn;
+        }
+        @Override
+        protected void onPreExecute() {
+            progressIndicator = ProgressDialog.show(MainActivity.this, null, "Please wait...", true, false);
+        }
+        @Override
+        protected Void doInBackground(char[]... params) {
+            try {
+                eManager.setKey(params[0]);
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            }
+            return null;
+        }
+        @Override
+        protected void onPostExecute(Void result) {
+            progressIndicator.dismiss();
+            if(onPwdReturn != null)
+                onPwdReturn.run();
         }
     }
 
