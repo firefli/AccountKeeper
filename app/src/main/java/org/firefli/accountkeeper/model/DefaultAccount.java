@@ -5,7 +5,7 @@ import org.firefli.accountkeeper.security.EncryptionManager;
 import java.security.GeneralSecurityException;
 
 /**
- * Created by Kyle on 8/24/2015.
+ * Created by firefli on 8/24/2015.
  */
 public class DefaultAccount extends Account {
 
@@ -18,7 +18,7 @@ public class DefaultAccount extends Account {
 
     public boolean unlock(EncryptionManager eManager) {
         try {
-            return getPassword(eManager).equals("default");
+            return new String(getPassword(eManager)).equals("default");
         } catch (GeneralSecurityException e) {
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {}
         return false;

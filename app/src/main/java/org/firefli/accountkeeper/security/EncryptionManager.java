@@ -19,7 +19,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class EncryptionManager {
 
     private static int KEY_LENGTH = 256;
-    private static int ITERATIONS = 1000;
+    private static int ITERATIONS = 10000;
 
     private SecretKey mKey;
     private byte[] mSalt;
@@ -32,15 +32,20 @@ public class EncryptionManager {
         SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
         PBEKeySpec spec = new PBEKeySpec(key, getSalt(false), ITERATIONS, KEY_LENGTH);
         mKey = secretKeyFactory.generateSecret(spec);
+        Arrays.fill(key, ' ');
+
+//        try {
+//            Assert.assertEquals(new String(decrypt(encrypt("test234".toCharArray()))), "test234");
+//        } catch (EncryptionManagerNeedsKeyException e) {
+//            e.printStackTrace();
+//        }
     }
 
     private SecretKeySpec getKey() throws EncryptionManagerNeedsKeyException {
         if(!hasKey())
             throw new EncryptionManagerNeedsKeyException();
 
-        SecretKeySpec skeySpec = new SecretKeySpec(mKey.getEncoded(), "AES");
-
-        return skeySpec;
+        return new SecretKeySpec(mKey.getEncoded(), "AES");
     }
 
     /**
@@ -49,13 +54,14 @@ public class EncryptionManager {
      * @return the decrypted data
      */
     public char[] decrypt(byte[] encryptedData) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
+        //Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(Cipher.DECRYPT_MODE, getKey());
         byte[] decryptedBytes = cipher.doFinal(encryptedData);
-        CharBuffer buffer = ByteBuffer.wrap(decryptedBytes).asCharBuffer();
-        char[] decrypted = new char[buffer.length()];
-        buffer.get(decrypted.length);
-        buffer.clear();
+        CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes));
+        char[] decrypted = new char[cbuf.limit()];
+        cbuf.get(decrypted);
+        //TODO: Clear the character buffer.
         return decrypted;
     }
 
@@ -67,12 +73,15 @@ public class EncryptionManager {
     public byte[] encrypt(char[] plainTextData) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
         ByteBuffer inBuffer = Charset.forName("UTF-8").encode(CharBuffer.wrap(plainTextData));
         ByteBuffer outBuffer = ByteBuffer.allocate(inBuffer.capacity() * 10);
+        //Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding"); // TODO: Make CBC/PKCS5Padding work.
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(Cipher.ENCRYPT_MODE, getKey());
-        cipher.doFinal(inBuffer, outBuffer);
-        byte[] encryptedBytes = outBuffer.array();
-        inBuffer.clear();
-        outBuffer.clear();
+        int length = cipher.doFinal(inBuffer, outBuffer);
+        byte[] encryptedBytes = new byte[length];
+        outBuffer.flip();
+        outBuffer.get(encryptedBytes, 0, length);
+        inBuffer.clear();  //TODO: Clear the in and out buffers.
+        outBuffer.clear();  //TODO: Clear the in and out buffers.
         return encryptedBytes;
     }
 

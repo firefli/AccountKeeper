@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by Kyle on 8/23/2015.
+ * Created by firefli on 8/23/2015.
  */
 public class AccountStore {
 

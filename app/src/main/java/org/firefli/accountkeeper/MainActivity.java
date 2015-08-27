@@ -20,6 +20,7 @@ import org.firefli.accountkeeper.model.Account;
 import org.firefli.accountkeeper.model.DefaultAccount;
 import org.firefli.accountkeeper.security.EncryptionManager;
 import org.firefli.accountkeeper.store.AccountStore;
+import org.firefli.accountkeeper.util.Logger;
 
 import java.security.GeneralSecurityException;
 import java.util.LinkedList;
@@ -28,10 +29,14 @@ import java.util.List;
 
 public class MainActivity extends Activity implements View.OnClickListener, EnterPasswordDialog.EnterPasswordDialogListener {
 
+    private static final String LOG_TAG = "MainActivity";
+
     private List<Account> mAccountList;
     private DefaultAccount defaultAccount;
     private EncryptionManager eManager;
     private Runnable onPwdReturn;
+
+    private MenuItem mLockMenuItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +44,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         setContentView(R.layout.activity_main);
         initObjects();
         initLayout();
-        //loadAccounts();
+        loadAccounts();
     }
 
     private void initObjects() {
@@ -84,6 +89,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        mLockMenuItem = menu.findItem(R.id.action_lock);
         return true;
     }
 
@@ -131,14 +137,11 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
     }
 
     private void showPwdDialog(Runnable onPwdRetun) {
+        Logger.t();
         this.onPwdReturn = onPwdRetun;
         FragmentManager fm = getFragmentManager();
         EnterPasswordDialog pwdDialog = new EnterPasswordDialog();
         pwdDialog.show(fm, "fragment_enter_pwd");
-    }
-
-    private void showAlertMessage(String alertMsg) {
-        new AlertDialog.Builder(this).setMessage(alertMsg).setTitle("Something is wrong!").create().show();
     }
 
     @Override
@@ -147,7 +150,13 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         onPwdReturn = null;
     }
 
-    private void loadAccounts() {
+    private void showAlertMessage(String alertMsg) {
+        new AlertDialog.Builder(this).setMessage(alertMsg).setTitle("Something is wrong!").create().show();
+    }
+
+    private boolean loadAccounts() {
+        Logger.t();
+        boolean hasLoaded = false;
         try {
             mAccountList.addAll(new AccountStore(this, eManager).pull());
             for (Account acct : mAccountList) {
@@ -156,9 +165,9 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
                 }
             }
             mAccountList.remove(defaultAccount);
+            hasLoaded = true;
         } catch (GeneralSecurityException e) {
-            e.printStackTrace();
-            showAlertMessage("Encryption failure!");
+            Logger.d(e.getMessage());
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
             showPwdDialog(new Runnable() {
                 public void run() {
@@ -166,9 +175,11 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
                 }
             });
         }
+        return hasLoaded;
     }
 
     private void showAccountPwd(final Account acct) {
+        Logger.t();
         try {
             acct.getPassword(eManager);
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
@@ -182,7 +193,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         }
     }
 
-    private class SetKeyTask extends AsyncTask<char[], Void, Void> {
+    private class SetKeyTask extends AsyncTask<char[], Void, Boolean> {
         private Runnable onPwdReturn;
         private ProgressDialog progressIndicator;
         public SetKeyTask(Runnable onPwdReturn) {
@@ -194,19 +205,27 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
             progressIndicator = ProgressDialog.show(MainActivity.this, null, "Please wait...", true, false);
         }
         @Override
-        protected Void doInBackground(char[]... params) {
+        protected Boolean doInBackground(char[]... params) {
+            boolean success = false;
             try {
                 eManager.setKey(params[0]);
+                if(loadAccounts())
+                    success = defaultAccount.unlock(eManager);
             } catch (GeneralSecurityException e) {
-                throw new RuntimeException(e);
+                Logger.d(e.getMessage());
             }
-            return null;
+            if(!success) eManager.removeKey();
+            return success;
         }
         @Override
-        protected void onPostExecute(Void result) {
+        protected void onPostExecute(Boolean success) {
             progressIndicator.dismiss();
-            if(onPwdReturn != null)
-                onPwdReturn.run();
+            if(success) {
+                mLockMenuItem.setIcon(R.drawable.ic_lock_open_white_24dp);
+                if (onPwdReturn != null)
+                    onPwdReturn.run();
+            } else
+                showAlertMessage("Failed to unlock.");
         }
     }
 

@@ -34,10 +34,7 @@ public class SettingsActivity extends Activity {
             addPreferencesFromResource(R.xml.preferences);
 
             final Preference myPref = (Preference) findPreference(KEY_PREF_RESET);
-
-            if(!AccountStore.hasStore(getActivity())) {
-                myPref.setEnabled(false);
-            }
+            myPref.setEnabled(AccountStore.hasStore(getActivity()));
 
             myPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                 public boolean onPreferenceClick(Preference preference) {
