@@ -1,5 +1,9 @@
 package org.firefli.accountkeeper.model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.text.GetChars;
+
 import org.firefli.accountkeeper.security.EncryptionManager;
 
 import java.security.GeneralSecurityException;
@@ -7,10 +11,12 @@ import java.security.GeneralSecurityException;
 /**
  * Created by firefli on 11/29/14.
  */
-public class Account {
+public class Account implements Parcelable {
 
     private String name;
     private byte[] ePass;
+
+    public Account() {}
 
     public String getName() {
         return name;
@@ -28,6 +34,13 @@ public class Account {
         return eManager.decrypt(ePass);
     }
 
+    public void setPassword(EncryptionManager eManager, GetChars password) throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
+        int pwdLength = password.length();
+        char[] pwd = new char[pwdLength];
+        password.getChars(0, pwdLength, pwd, 0);
+        setPassword(eManager, pwd);
+    }
+
     public void setPassword(EncryptionManager eManager, char[] password) throws EncryptionManager.EncryptionManagerNeedsKeyException, GeneralSecurityException {
         this.ePass = eManager.encrypt(password);
     }
@@ -39,4 +52,32 @@ public class Account {
     public void setRawPwd(byte[] rawPwd) {
         ePass = rawPwd;
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    protected Account(Parcel in) {
+        name = in.readString();
+        ePass = in.createByteArray();
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(name);
+        dest.writeByteArray(ePass);
+    }
+
+    public static final Creator<Account> CREATOR = new Creator<Account>() {
+        @Override
+        public Account createFromParcel(Parcel in) {
+            return new Account(in);
+        }
+
+        @Override
+        public Account[] newArray(int size) {
+            return new Account[size];
+        }
+    };
 }

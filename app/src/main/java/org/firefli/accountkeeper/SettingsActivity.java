@@ -8,6 +8,7 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 
 import org.firefli.accountkeeper.store.AccountStore;
+import org.firefli.accountkeeper.store.EncryptionStore;
 
 /**
  * Created by firefli on 8/25/15.
@@ -43,6 +44,7 @@ public class SettingsActivity extends Activity {
                         public void onClick(DialogInterface dialog, int which) {
                             if(which == DialogInterface.BUTTON_POSITIVE) {
                                 AccountStore.deleteStore(getActivity());
+                                EncryptionStore.deleteStore(getActivity());
                                 myPref.setEnabled(false);
                             }
                         }

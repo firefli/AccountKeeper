@@ -18,11 +18,23 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class EncryptionManager {
 
+    //TODO: Major issue when re-entering password...
+
+    public interface EncryptionManagerStorage {
+        public void storeSalt(byte[] salt);
+        public byte[] retrieveSalt();
+    }
+
     private static int KEY_LENGTH = 256;
     private static int ITERATIONS = 10000;
 
+    private EncryptionManagerStorage encryptionStore;
     private SecretKey mKey;
     private byte[] mSalt;
+
+    public EncryptionManager(EncryptionManagerStorage store) {
+        encryptionStore = store;
+    }
 
     /**
      * Set the key to be used by the encryption manager. Intensive.
@@ -30,8 +42,9 @@ public class EncryptionManager {
      */
     public void setKey(char[] key) throws GeneralSecurityException {
         SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-        PBEKeySpec spec = new PBEKeySpec(key, getSalt(false), ITERATIONS, KEY_LENGTH);
+        PBEKeySpec spec = new PBEKeySpec(key, getSalt(), ITERATIONS, KEY_LENGTH);
         mKey = secretKeyFactory.generateSecret(spec);
+
         Arrays.fill(key, ' ');
 
 //        try {
@@ -85,13 +98,10 @@ public class EncryptionManager {
         return encryptedBytes;
     }
 
-    public void setSalt(byte[] salt) {
-        mSalt = Arrays.copyOf(salt, salt.length);
-    }
-
-    private byte[] getSalt(boolean newSalt) {
-        if(mSalt == null || newSalt) {
+    private byte[] getSalt() {
+        if(mSalt == null && (mSalt = encryptionStore.retrieveSalt()) == null) {
             mSalt = genNewSalt();
+            encryptionStore.storeSalt(mSalt);
         }
         return mSalt;
     }
@@ -109,6 +119,10 @@ public class EncryptionManager {
     public boolean hasKey() {
         return mKey != null;
     }
+
+    //
+    //  Exceptions
+    //
 
     public static class EncryptionManagerNeedsKeyException extends Exception {}
 

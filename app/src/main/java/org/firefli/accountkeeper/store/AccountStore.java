@@ -21,7 +21,8 @@ import java.util.Set;
  */
 public class AccountStore {
 
-    public static final String PREFS_NAME = "Store";
+    private static final String PREFS_NAME = "Store";
+    private static final int BASE64_SETTINGS = Base64.NO_WRAP | Base64.NO_CLOSE | Base64.NO_PADDING;
 
     public Context mCtx;
     public EncryptionManager eManager;
@@ -38,9 +39,9 @@ public class AccountStore {
         Set<String> eNames = new HashSet<String>();
 
         for(Account account : accounts) {
-            String eName = Base64.encodeToString(eManager.encrypt(account.getName().toCharArray()), Base64.NO_WRAP);
+            String eName = Base64.encodeToString(eManager.encrypt(account.getName().toCharArray()), BASE64_SETTINGS);
             eNames.add(eName);
-            String b64pwd = Base64.encodeToString(account.getRawPwd(), Base64.NO_WRAP);
+            String b64pwd = Base64.encodeToString(account.getRawPwd(), BASE64_SETTINGS);
             if(!prefs.contains(eName) || !prefs.getString(eName, "").equals(b64pwd)) {
                 prefsEdit.putString(eName, b64pwd);
             }
@@ -55,37 +56,51 @@ public class AccountStore {
         prefsEdit.commit();
     }
 
+    public DefaultAccount pullDefaultAccount() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
+        DefaultAccount defAccount = null;
+        SharedPreferences prefs = mCtx.getSharedPreferences(PREFS_NAME, 0);
+        String encryptedDefaultName = Base64.encodeToString(DefaultAccount.encryptedDefaultName(eManager), BASE64_SETTINGS);
+        Map<String, String> savedAccounts = (Map<String, String>) prefs.getAll();
+        if(savedAccounts.isEmpty()) {
+            defAccount = createDefaultAccount();
+        } else {
+            if (savedAccounts.containsKey(encryptedDefaultName)) {
+                defAccount = new DefaultAccount();
+                defAccount.setRawPwd(Base64.decode(prefs.getString(encryptedDefaultName, ""), BASE64_SETTINGS));
+            }
+        }
+        return defAccount;
+    }
+
     public List<Account> pull() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
         SharedPreferences prefs = mCtx.getSharedPreferences(PREFS_NAME, 0);
         Map<String, String> savedAccounts = (Map<String,String>)prefs.getAll();
         List<Account> accounts = new ArrayList<Account>(savedAccounts.size());
 
         for(String eAcctName : savedAccounts.keySet()) {
-            String name = new String(eManager.decrypt(Base64.decode(eAcctName, Base64.NO_WRAP)));
+            String name = new String(eManager.decrypt(Base64.decode(eAcctName, BASE64_SETTINGS)));
             Account nextAcct = DefaultAccount.isDefaultAccount(name)? new DefaultAccount() : new Account();
             nextAcct.setName(name);
-            nextAcct.setRawPwd(Base64.decode(savedAccounts.get(eAcctName), Base64.NO_WRAP));
+            nextAcct.setRawPwd(Base64.decode(savedAccounts.get(eAcctName), BASE64_SETTINGS));
             accounts.add(nextAcct);
         }
 
         if(accounts.isEmpty()) {
-            accounts = createDefaultAccount();
+            accounts.add(createDefaultAccount());
         }
 
         return accounts;
     }
 
-    private List<Account> createDefaultAccount() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
-        Account defaultAcct = new DefaultAccount(eManager);
-        List<Account> acctList = Arrays.asList(new Account[]{defaultAcct});
-        store(acctList);
-        return acctList;
+    private DefaultAccount createDefaultAccount() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
+        DefaultAccount defaultAcct = new DefaultAccount(eManager);
+        store(Arrays.asList(new Account[]{defaultAcct}));
+        return defaultAcct;
     }
 
     public static boolean hasStore(Context ctx) {
         return !ctx.getSharedPreferences(PREFS_NAME, 0).getAll().isEmpty();
     }
-
 
     public static void deleteStore(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, 0);

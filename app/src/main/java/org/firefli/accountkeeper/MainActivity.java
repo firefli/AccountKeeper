@@ -1,11 +1,7 @@
 package org.firefli.accountkeeper;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.FragmentManager;
-import android.app.ProgressDialog;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,14 +23,14 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class MainActivity extends Activity implements View.OnClickListener, EnterPasswordDialog.EnterPasswordDialogListener {
+public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     private static final String LOG_TAG = "MainActivity";
+    private static final int ADD_ACCOUNT_REQ_CODE = 0;
 
+    private AccountStore mAccountStore;
     private List<Account> mAccountList;
     private DefaultAccount defaultAccount;
-    private EncryptionManager eManager;
-    private Runnable onPwdReturn;
 
     private MenuItem mLockMenuItem;
 
@@ -47,9 +43,16 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         loadAccounts();
     }
 
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode == ADD_ACCOUNT_REQ_CODE && resultCode == Activity.RESULT_OK) {
+            Account newAccount = data.getParcelableExtra(AddAccountActivity.EXTRA_NEW_ACCOUNT);
+            addNewAccount(newAccount);
+        }
+    }
+
     private void initObjects() {
         mAccountList = new LinkedList<Account>();
-        eManager = new EncryptionManager();
+        mAccountStore = new AccountStore(this, eManager);
     }
 
     private void initLayout() {
@@ -67,7 +70,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
 
             @Override
             public long getItemId(int i) {
-                return 0;
+                return i;
             }
 
             @Override
@@ -101,6 +104,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         int id = item.getItemId();
         switch(id) {
             case R.id.action_add:
+                displayAddNewAccount();
                 break;
             case R.id.action_delete:
                 break;
@@ -112,11 +116,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
                 } else {
                     showPwdDialog(new Runnable() {
                         public void run() {
-                            if(defaultAccount.unlock(eManager)) {
-                                lockMenuItem.setIcon(R.drawable.ic_lock_open_white_24dp);
-                            } else {
-                                showPwdDialog(this);
-                            }
+                            lockMenuItem.setIcon(R.drawable.ic_lock_open_white_24dp);
                         }
                     });
                 }
@@ -134,24 +134,6 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         if(view.getTag() instanceof Account) {
            showAccountPwd((Account)view.getTag());
         }
-    }
-
-    private void showPwdDialog(Runnable onPwdRetun) {
-        Logger.t();
-        this.onPwdReturn = onPwdRetun;
-        FragmentManager fm = getFragmentManager();
-        EnterPasswordDialog pwdDialog = new EnterPasswordDialog();
-        pwdDialog.show(fm, "fragment_enter_pwd");
-    }
-
-    @Override
-    public void onFinishPwdDialog(char[] inputText) {
-        new SetKeyTask(onPwdReturn).execute(inputText);
-        onPwdReturn = null;
-    }
-
-    private void showAlertMessage(String alertMsg) {
-        new AlertDialog.Builder(this).setMessage(alertMsg).setTitle("Something is wrong!").create().show();
     }
 
     private boolean loadAccounts() {
@@ -193,39 +175,24 @@ public class MainActivity extends Activity implements View.OnClickListener, Ente
         }
     }
 
-    private class SetKeyTask extends AsyncTask<char[], Void, Boolean> {
-        private Runnable onPwdReturn;
-        private ProgressDialog progressIndicator;
-        public SetKeyTask(Runnable onPwdReturn) {
-            super();
-            this.onPwdReturn = onPwdReturn;
-        }
-        @Override
-        protected void onPreExecute() {
-            progressIndicator = ProgressDialog.show(MainActivity.this, null, "Please wait...", true, false);
-        }
-        @Override
-        protected Boolean doInBackground(char[]... params) {
-            boolean success = false;
-            try {
-                eManager.setKey(params[0]);
-                if(loadAccounts())
-                    success = defaultAccount.unlock(eManager);
-            } catch (GeneralSecurityException e) {
-                Logger.d(e.getMessage());
-            }
-            if(!success) eManager.removeKey();
-            return success;
-        }
-        @Override
-        protected void onPostExecute(Boolean success) {
-            progressIndicator.dismiss();
-            if(success) {
-                mLockMenuItem.setIcon(R.drawable.ic_lock_open_white_24dp);
-                if (onPwdReturn != null)
-                    onPwdReturn.run();
-            } else
-                showAlertMessage("Failed to unlock.");
+    private void displayAddNewAccount() {
+        Intent intent = new Intent(this, AddAccountActivity.class);
+        startActivityForResult(intent, ADD_ACCOUNT_REQ_CODE);
+    }
+
+    private void addNewAccount(final Account acct) {
+        try {
+            mAccountList.add(acct);
+            mAccountStore.store(mAccountList);
+            ((BaseAdapter)((ListView) findViewById(R.id.accountList)).getAdapter()).notifyDataSetChanged();
+        } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
+            showPwdDialog(new Runnable() {
+                public void run() {
+                    addNewAccount(acct);
+                }
+            });
+        } catch (GeneralSecurityException e) {
+            showAlertMessage("Encryption failure.");
         }
     }
 
