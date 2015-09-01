@@ -44,14 +44,7 @@ public class EncryptionManager {
         SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
         PBEKeySpec spec = new PBEKeySpec(key, getSalt(), ITERATIONS, KEY_LENGTH);
         mKey = secretKeyFactory.generateSecret(spec);
-
         Arrays.fill(key, ' ');
-
-//        try {
-//            Assert.assertEquals(new String(decrypt(encrypt("test234".toCharArray()))), "test234");
-//        } catch (EncryptionManagerNeedsKeyException e) {
-//            e.printStackTrace();
-//        }
     }
 
     private SecretKeySpec getKey() throws EncryptionManagerNeedsKeyException {
