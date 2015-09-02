@@ -9,7 +9,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
-import org.robolectric.RobolectricGradleTestRunner;
 import org.robolectric.annotation.Config;
 
 import java.security.GeneralSecurityException;
@@ -19,7 +18,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 /**
  * Created by firefli on 11/30/2014.
  */
-@RunWith(RobolectricGradleTestRunner.class)
+@RunWith(CustomRobolectricTestRunner.class)
 @Config(constants = BuildConfig.class)
 public class EncryptionManagerTest extends TestCase {
 

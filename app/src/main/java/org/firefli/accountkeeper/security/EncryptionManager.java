@@ -10,6 +10,7 @@ import java.util.Arrays;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -27,6 +28,7 @@ public class EncryptionManager {
 
     private static int KEY_LENGTH = 256;
     private static int ITERATIONS = 10000;
+    private static final int IV_LENGTH = 16;
 
     private EncryptionManagerStorage encryptionStore;
     private SecretKey mKey;
@@ -60,11 +62,11 @@ public class EncryptionManager {
      * @return the decrypted data
      */
     public char[] decrypt(byte[] encryptedData) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
-        //Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.DECRYPT_MODE, getKey());
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        IvParameterSpec ivSpec = getIv(Arrays.copyOfRange(encryptedData, 0, IV_LENGTH));
+        cipher.init(Cipher.DECRYPT_MODE, getKey(), ivSpec);
         byte[] decryptedBytes = cipher.doFinal(encryptedData);
-        CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes));
+        CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes, IV_LENGTH, decryptedBytes.length-IV_LENGTH));
         char[] decrypted = new char[cbuf.limit()];
         cbuf.get(decrypted);
         //TODO: Clear the character buffer.
@@ -79,16 +81,27 @@ public class EncryptionManager {
     public byte[] encrypt(char[] plainTextData) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
         ByteBuffer inBuffer = Charset.forName("UTF-8").encode(CharBuffer.wrap(plainTextData));
         ByteBuffer outBuffer = ByteBuffer.allocate(inBuffer.capacity() * 10);
-        //Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding"); // TODO: Make CBC/PKCS5Padding work.
-        Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.ENCRYPT_MODE, getKey());
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        IvParameterSpec ivSpec = getRandIv();
+        cipher.init(Cipher.ENCRYPT_MODE, getKey(), ivSpec);
         int length = cipher.doFinal(inBuffer, outBuffer);
-        byte[] encryptedBytes = new byte[length];
+        byte[] encryptedBytes = new byte[length + IV_LENGTH];
+        System.arraycopy(ivSpec.getIV(), 0, encryptedBytes, 0, IV_LENGTH);
         outBuffer.flip();
-        outBuffer.get(encryptedBytes, 0, length);
+        outBuffer.get(encryptedBytes, IV_LENGTH, length);
         inBuffer.clear();  //TODO: Clear the in and out buffers.
         outBuffer.clear();  //TODO: Clear the in and out buffers.
         return encryptedBytes;
+    }
+
+    public static IvParameterSpec getIv(byte[] ivSrc){
+        return new IvParameterSpec(ivSrc, ivSrc.length - IV_LENGTH, IV_LENGTH);
+    }
+
+    private static IvParameterSpec getRandIv(){
+        byte[] s = new byte[IV_LENGTH];
+        new SecureRandom().nextBytes(s);
+        return new IvParameterSpec(s);
     }
 
     private byte[] getSalt() {

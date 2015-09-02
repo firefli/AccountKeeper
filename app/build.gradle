@@ -27,7 +27,7 @@ android {
     }
 }
 
-apply plugin: 'org.robolectric'
+//apply plugin: 'org.robolectric'
 
 dependencies {
     repositories {
@@ -43,4 +43,5 @@ dependencies {
     testCompile 'org.robolectric:robolectric:3.0'
     testCompile 'org.mockito:mockito-core:1.+'
     testCompile 'com.squareup:fest-android:1.0.+'
+    testCompile 'com.jayway.awaitility:awaitility:1.6.+'
 }
