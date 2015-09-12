@@ -24,7 +24,7 @@ public class EncryptionStore implements EncryptionManager.EncryptionManagerStora
     @Override
     public void storeSalt(byte[] salt) {
         SharedPreferences prefs = mCtx.getSharedPreferences(PREFS_NAME, 0);
-        prefs.edit().putString(KEY_SALT, Base64.encodeToString(salt, BASE64_SETTINGS)).commit();
+        prefs.edit().putString(KEY_SALT, Base64.encodeToString(salt, BASE64_SETTINGS)).apply();
     }
 
     @Override
@@ -40,6 +40,6 @@ public class EncryptionStore implements EncryptionManager.EncryptionManagerStora
 
     public static void deleteStore(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, 0);
-        prefs.edit().clear().commit();
+        prefs.edit().clear().apply();
     }
 }

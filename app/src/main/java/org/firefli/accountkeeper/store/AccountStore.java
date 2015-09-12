@@ -39,7 +39,7 @@ public class AccountStore {
         Set<String> eNames = new HashSet<String>();
 
         for(Account account : accounts) {
-            String eName = Base64.encodeToString(eManager.encrypt(account.getName().toCharArray()), BASE64_SETTINGS);
+            String eName = eManager.base64Encrypt(account.getName().toCharArray(), BASE64_SETTINGS);
             eNames.add(eName);
             String b64pwd = Base64.encodeToString(account.getRawPwd(), BASE64_SETTINGS);
             if(!prefs.contains(eName) || !prefs.getString(eName, "").equals(b64pwd)) {

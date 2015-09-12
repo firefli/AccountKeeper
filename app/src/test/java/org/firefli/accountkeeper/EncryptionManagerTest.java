@@ -1,5 +1,7 @@
 package org.firefli.accountkeeper;
 
+import android.util.Base64;
+
 import junit.framework.TestCase;
 
 import org.firefli.accountkeeper.security.EncryptionManager;
@@ -51,9 +53,33 @@ public class EncryptionManagerTest extends TestCase {
     public void testResetKey() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
         byte[] encryptedData = manager.encrypt(plainText);
         char[] decryptedText = manager.decrypt(encryptedData);
-        manager.setKey(KEY);
+        manager.setKey(new char[]{'t','s','e','t'});
+        exception.expect(GeneralSecurityException.class);
         char[] decryptedText2 = manager.decrypt(encryptedData);
+        exception.reportMissingExceptionWithMessage("Expected GeneralSecurityException");
+        manager.setKey(new char[]{'t', 'e', 's', 't'});
         assertThat(decryptedText).isEqualTo(decryptedText2);
+    }
+
+    @Test
+    public void testNewManager() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
+        encStore = new EncryptionManager.EncryptionManagerStorage() {
+            byte[] salt = null;
+            @Override
+            public void storeSalt(byte[] salt) {
+                this.salt = salt;
+            }
+            @Override
+            public byte[] retrieveSalt() {
+                return salt;
+            }
+        };
+        manager = new EncryptionManager(encStore);
+        manager.setKey(KEY);
+        byte[] encryptedData = manager.encrypt(plainText);
+        manager = new EncryptionManager(encStore);
+        manager.setKey(KEY);
+        assertThat(manager.decrypt(encryptedData)).isEqualTo(plainText);
     }
 
     @Test
@@ -70,6 +96,13 @@ public class EncryptionManagerTest extends TestCase {
         byte[] encryptedData = manager.encrypt(plainText);
         char[] decryptedText = manager.decrypt(encryptedData);
         assertThat(decryptedText).isEqualTo(plainText);
+    }
+
+    @Test
+    public void testBase64Encrypt() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
+        int base64settings = Base64.NO_CLOSE | Base64.NO_PADDING | Base64.NO_WRAP;
+        char[] input = "TEST1234".toCharArray();
+        assertThat(manager.base64Decrypt(manager.base64Encrypt(input, base64settings), base64settings)).isEqualTo(input);
     }
 
 }

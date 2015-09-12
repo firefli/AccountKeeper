@@ -30,7 +30,8 @@ public class EncryptionManager {
 
     private static int KEY_LENGTH = 256;
     private static int ITERATIONS = 10000;
-    private static final int IV_LENGTH = 16;
+    private static final int BLOCK_SIZE = 16;
+    private static final int IV_LENGTH = BLOCK_SIZE;
 
     private EncryptionManagerStorage encryptionStore;
     private SecretKey mKey;
@@ -65,12 +66,16 @@ public class EncryptionManager {
      */
     public char[] decrypt(byte[] encryptedData) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        IvParameterSpec ivSpec = getIv(Arrays.copyOfRange(encryptedData, 0, IV_LENGTH));
-        cipher.init(Cipher.DECRYPT_MODE, getKey(), ivSpec);
+        cipher.init(Cipher.DECRYPT_MODE, getKey(), getIv(encryptedData));
         byte[] decryptedBytes = cipher.doFinal(encryptedData, IV_LENGTH, encryptedData.length - IV_LENGTH);
-        CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes));
-        char[] decrypted = new char[cbuf.limit()];
-        cbuf.get(decrypted);
+        char[] decrypted = null;
+        if(decryptedBytes == null) {
+            decrypted = new char[0];
+        } else {
+            CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes));
+            decrypted = new char[cbuf.limit()];
+            cbuf.get(decrypted);
+        }
         //TODO: Clear the character buffer.
         return decrypted;
     }
@@ -82,7 +87,7 @@ public class EncryptionManager {
      */
     public byte[] encrypt(char[] plainTextData) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
         ByteBuffer inBuffer = Charset.forName("UTF-8").encode(CharBuffer.wrap(plainTextData));
-        ByteBuffer outBuffer = ByteBuffer.allocate(inBuffer.capacity() * 10);
+        ByteBuffer outBuffer = ByteBuffer.allocate(inBuffer.capacity() + BLOCK_SIZE);
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         IvParameterSpec ivSpec = getRandIv();
         cipher.init(Cipher.ENCRYPT_MODE, getKey(), ivSpec);
@@ -105,7 +110,7 @@ public class EncryptionManager {
     }
 
     private static IvParameterSpec getIv(byte[] ivSrc){
-        return new IvParameterSpec(ivSrc, ivSrc.length - IV_LENGTH, IV_LENGTH);
+        return new IvParameterSpec(ivSrc, 0, IV_LENGTH);
     }
 
     private static IvParameterSpec getRandIv(){
