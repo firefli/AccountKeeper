@@ -48,8 +48,11 @@ public class AccountStore {
         }
 
         for(String key : prefs.getAll().keySet()) {
-            if(!eNames.contains(key)) {
-                prefsEdit.remove(key);
+            if(!eNames.contains(key) ) {
+                char[] acctName = eManager.base64Decrypt(key, BASE64_SETTINGS);
+                if(!DefaultAccount.isDefaultAccount(acctName)) {
+                    prefsEdit.remove(key);
+                }
             }
         }
 
@@ -59,14 +62,15 @@ public class AccountStore {
     public DefaultAccount pullDefaultAccount() throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
         DefaultAccount defAccount = null;
         SharedPreferences prefs = mCtx.getSharedPreferences(PREFS_NAME, 0);
-        String encryptedDefaultName = Base64.encodeToString(DefaultAccount.encryptedDefaultName(eManager), BASE64_SETTINGS);
         Map<String, String> savedAccounts = (Map<String, String>) prefs.getAll();
         if(savedAccounts.isEmpty()) {
             defAccount = createDefaultAccount();
         } else {
-            if (savedAccounts.containsKey(encryptedDefaultName)) {
-                defAccount = new DefaultAccount();
-                defAccount.setRawPwd(Base64.decode(prefs.getString(encryptedDefaultName, ""), BASE64_SETTINGS));
+            for(String eAcctName : savedAccounts.keySet()) {
+                if (DefaultAccount.isDefaultAccount(eManager.base64Decrypt(eAcctName, BASE64_SETTINGS))) {
+                    defAccount = new DefaultAccount();
+                    defAccount.setRawPwd(Base64.decode(savedAccounts.get(eAcctName), BASE64_SETTINGS));
+                }
             }
         }
         return defAccount;
@@ -78,9 +82,9 @@ public class AccountStore {
         List<Account> accounts = new ArrayList<Account>(savedAccounts.size());
 
         for(String eAcctName : savedAccounts.keySet()) {
-            String name = new String(eManager.decrypt(Base64.decode(eAcctName, BASE64_SETTINGS)));
+            char[] name = eManager.base64Decrypt(eAcctName, BASE64_SETTINGS);
             Account nextAcct = DefaultAccount.isDefaultAccount(name)? new DefaultAccount() : new Account();
-            nextAcct.setName(name);
+            nextAcct.setName(new String(name));
             nextAcct.setRawPwd(Base64.decode(savedAccounts.get(eAcctName), BASE64_SETTINGS));
             accounts.add(nextAcct);
         }

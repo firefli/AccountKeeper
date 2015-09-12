@@ -61,6 +61,7 @@ public class EncryptionManagerTest extends TestCase {
         manager.removeKey();
         exception.expect(EncryptionManager.EncryptionManagerNeedsKeyException.class);
         manager.encrypt(plainText);
+        exception.reportMissingExceptionWithMessage("Expected EncryptionManager.EncryptionManagerNeedsKeyException");
     }
 
     @Test

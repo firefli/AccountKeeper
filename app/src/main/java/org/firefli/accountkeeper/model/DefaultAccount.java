@@ -3,6 +3,7 @@ package org.firefli.accountkeeper.model;
 import org.firefli.accountkeeper.security.EncryptionManager;
 
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 
 /**
  * Created by firefli on 8/24/2015.
@@ -23,7 +24,7 @@ public class DefaultAccount extends Account {
 
     public boolean unlock(EncryptionManager eManager) {
         try {
-            return new String(getPassword(eManager)).equals("default");
+            return new String(getPassword(eManager)).equals(DEFAULT_ACCT_PWD);
         } catch (GeneralSecurityException e) {
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {}
         return false;
@@ -33,7 +34,11 @@ public class DefaultAccount extends Account {
         return eManager.encrypt(DEFAULT_ACCT_NAME.toCharArray());
     }
 
-    public static boolean isDefaultAccount(String acctName) {
-        return acctName.equals("default");
+    public static boolean isDefaultAccount(char[] acctName) {
+        return Arrays.equals(acctName, DEFAULT_ACCT_NAME.toCharArray());
+    }
+
+    public static boolean isDefaultAccount(Account acct) {
+        return DEFAULT_ACCT_NAME.equals(acct.getName());
     }
 }

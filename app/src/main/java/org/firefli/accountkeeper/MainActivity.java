@@ -147,6 +147,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 }
             }
             mAccountList.remove(defaultAccount);
+            ((BaseAdapter)((ListView) findViewById(R.id.accountList)).getAdapter()).notifyDataSetChanged();
             hasLoaded = true;
         } catch (GeneralSecurityException e) {
             Logger.d(e.getMessage());

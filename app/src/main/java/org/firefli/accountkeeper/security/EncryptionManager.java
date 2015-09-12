@@ -1,5 +1,7 @@
 package org.firefli.accountkeeper.security;
 
+import android.util.Base64;
+
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -65,8 +67,8 @@ public class EncryptionManager {
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         IvParameterSpec ivSpec = getIv(Arrays.copyOfRange(encryptedData, 0, IV_LENGTH));
         cipher.init(Cipher.DECRYPT_MODE, getKey(), ivSpec);
-        byte[] decryptedBytes = cipher.doFinal(encryptedData);
-        CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes, IV_LENGTH, decryptedBytes.length-IV_LENGTH));
+        byte[] decryptedBytes = cipher.doFinal(encryptedData, IV_LENGTH, encryptedData.length - IV_LENGTH);
+        CharBuffer cbuf = Charset.defaultCharset().decode(ByteBuffer.wrap(decryptedBytes));
         char[] decrypted = new char[cbuf.limit()];
         cbuf.get(decrypted);
         //TODO: Clear the character buffer.
@@ -94,7 +96,15 @@ public class EncryptionManager {
         return encryptedBytes;
     }
 
-    public static IvParameterSpec getIv(byte[] ivSrc){
+    public String base64Encrypt(char[] plainTextData, int base64Options) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
+        return new String(Base64.encodeToString(encrypt(plainTextData), base64Options));
+    }
+
+    public char[] base64Decrypt(String base64EncodedEncryptedString, int base64Options) throws GeneralSecurityException, EncryptionManagerNeedsKeyException {
+        return decrypt(Base64.decode(base64EncodedEncryptedString, base64Options));
+    }
+
+    private static IvParameterSpec getIv(byte[] ivSrc){
         return new IvParameterSpec(ivSrc, ivSrc.length - IV_LENGTH, IV_LENGTH);
     }
 

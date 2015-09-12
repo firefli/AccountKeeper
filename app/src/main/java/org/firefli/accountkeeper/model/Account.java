@@ -7,6 +7,7 @@ import android.text.GetChars;
 import org.firefli.accountkeeper.security.EncryptionManager;
 
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 
 /**
  * Created by firefli on 11/29/14.
@@ -17,6 +18,11 @@ public class Account implements Parcelable {
     private byte[] ePass;
 
     public Account() {}
+
+    public Account(String name, char[] pass, EncryptionManager eManager) throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException {
+        this.name = name;
+        setPassword(eManager, pass);
+    }
 
     public String getName() {
         return name;
@@ -51,6 +57,21 @@ public class Account implements Parcelable {
 
     public void setRawPwd(byte[] rawPwd) {
         ePass = rawPwd;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof Account) {
+            Account otherAcct = (Account)obj;
+            return this.name.equals(otherAcct.name) && Arrays.equals(this.ePass, otherAcct.ePass);
+        } else {
+            return false;
+        }
     }
 
     @Override
