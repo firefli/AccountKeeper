@@ -60,7 +60,7 @@ public class AddAccountActivity extends BaseActivity implements View.OnClickList
         try {
             Account account = new Account();
             account.setName(((EditText) findViewById(R.id.input_acct_name)).getText().toString());
-            Editable pwdSequence = ((EditText) findViewById(R.id.input_acct_name)).getText();
+            Editable pwdSequence = ((EditText) findViewById(R.id.input_pass)).getText();
             account.setPassword(eManager, pwdSequence);
             Intent resultIntent = new Intent();
             resultIntent.putExtra(EXTRA_NEW_ACCOUNT, account);

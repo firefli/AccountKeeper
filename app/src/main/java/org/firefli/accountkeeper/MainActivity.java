@@ -7,8 +7,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -19,11 +19,12 @@ import org.firefli.accountkeeper.store.AccountStore;
 import org.firefli.accountkeeper.util.Logger;
 
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 
-public class MainActivity extends BaseActivity implements View.OnClickListener {
+public class MainActivity extends BaseActivity {
 
     private static final String LOG_TAG = "MainActivity";
     private static final int ADD_ACCOUNT_REQ_CODE = 0;
@@ -31,6 +32,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private AccountStore mAccountStore;
     private List<Account> mAccountList;
     private DefaultAccount defaultAccount;
+    private BaseAdapter mListViewAdapter;
 
     private MenuItem mLockMenuItem;
 
@@ -57,7 +59,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     private void initLayout() {
         ListView accountListView = (ListView)findViewById(R.id.accountList);
-        accountListView.setAdapter(new BaseAdapter() {
+        mListViewAdapter = new BaseAdapter() {
             @Override
             public int getCount() {
                 return mAccountList.size();
@@ -81,9 +83,15 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 Account currAcct = mAccountList.get(i);
                 ((TextView) view.findViewById(R.id.textName)).setText(currAcct.getName());
                 ((TextView) view.findViewById(R.id.textPass)).setText("*****");
-                ((Button) view.findViewById(R.id.buttonShow)).setOnClickListener(MainActivity.this);
-                ((Button) view.findViewById(R.id.buttonShow)).setTag(currAcct);
+                ((TextView) view.findViewById(R.id.textPass)).setTag(R.id.pwd_show_tag, false);
                 return view;
+            }
+        };
+        accountListView.setAdapter(mListViewAdapter);
+        accountListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                toggleAccountPwd(view, (Account) parent.getItemAtPosition(position));
             }
         });
     }
@@ -129,13 +137,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onClick(View view) {
-        if(view.getTag() instanceof Account) {
-           showAccountPwd((Account)view.getTag());
-        }
-    }
-
     private boolean loadAccounts() {
         Logger.t();
         boolean hasLoaded = false;
@@ -147,7 +148,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 }
             }
             mAccountList.remove(defaultAccount);
-            ((BaseAdapter)((ListView) findViewById(R.id.accountList)).getAdapter()).notifyDataSetChanged();
+            mListViewAdapter.notifyDataSetChanged();
             hasLoaded = true;
         } catch (GeneralSecurityException e) {
             Logger.d(e.getMessage());
@@ -161,14 +162,24 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         return hasLoaded;
     }
 
-    private void showAccountPwd(final Account acct) {
+    private void toggleAccountPwd(final View view, final Account acct) {
         Logger.t();
         try {
-            acct.getPassword(eManager);
+            TextView pwdView = ((TextView)view.findViewById(R.id.textPass));
+            if(pwdView.getTag(R.id.pwd_show_tag) == false) {
+                char[] pwd = acct.getPassword(eManager);
+                pwdView.setText(new String(pwd));
+                Arrays.fill(pwd, ' ');
+                pwdView.setTag(R.id.pwd_show_tag, true);
+            } else {
+                pwdView.setText("*****");
+                pwdView.setTag(R.id.pwd_show_tag, false);
+            }
+            //mListViewAdapter.notifyDataSetChanged();
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
             showPwdDialog(new Runnable() {
                 public void run() {
-                    showAccountPwd(acct);
+                    toggleAccountPwd(view, acct);
                 }
             });
         } catch (GeneralSecurityException e) {
@@ -185,7 +196,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         try {
             mAccountList.add(acct);
             mAccountStore.store(mAccountList);
-            ((BaseAdapter)((ListView) findViewById(R.id.accountList)).getAdapter()).notifyDataSetChanged();
+            mListViewAdapter.notifyDataSetChanged();
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
             showPwdDialog(new Runnable() {
                 public void run() {
