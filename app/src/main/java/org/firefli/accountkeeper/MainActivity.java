@@ -24,7 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class MainActivity extends BaseActivity {
+public class MainActivity extends BaseActivity implements EncryptionManager.EncryptionManagerListener {
 
     private static final String LOG_TAG = "MainActivity";
     private static final int ADD_ACCOUNT_REQ_CODE = 0;
@@ -55,6 +55,7 @@ public class MainActivity extends BaseActivity {
     private void initObjects() {
         mAccountList = new LinkedList<Account>();
         mAccountStore = new AccountStore(this, eManager);
+        eManager.setListener(this);
     }
 
     private void initLayout() {
@@ -83,7 +84,7 @@ public class MainActivity extends BaseActivity {
                 Account currAcct = mAccountList.get(i);
                 ((TextView) view.findViewById(R.id.textName)).setText(currAcct.getName());
                 ((TextView) view.findViewById(R.id.textPass)).setText("*****");
-                ((TextView) view.findViewById(R.id.textPass)).setTag(R.id.pwd_show_tag, false);
+                view.findViewById(R.id.textPass).setTag(R.id.pwd_show_tag, false);
                 return view;
             }
         };
@@ -208,4 +209,18 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    @Override
+    public Activity getActivity() {
+        return this;
+    }
+
+    @Override
+    public void onEncryptionManagerUnlocked() {
+        mLockMenuItem.setIcon(R.drawable.ic_lock_open_white_24dp);
+    }
+
+    @Override
+    public void onEncryptionManagerLocked() {
+        mLockMenuItem.setIcon(R.drawable.ic_lock_outline_white_24dp);
+    }
 }

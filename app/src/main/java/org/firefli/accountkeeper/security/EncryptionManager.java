@@ -1,7 +1,9 @@
 package org.firefli.accountkeeper.security;
 
+import android.app.Activity;
 import android.util.Base64;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -21,11 +23,15 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class EncryptionManager {
 
-    //TODO: Major issue when re-entering password...
-
     public interface EncryptionManagerStorage {
         public void storeSalt(byte[] salt);
         public byte[] retrieveSalt();
+    }
+
+    public interface EncryptionManagerListener {
+        public Activity getActivity();
+        public void onEncryptionManagerUnlocked();
+        public void onEncryptionManagerLocked();
     }
 
     private static int KEY_LENGTH = 256;
@@ -36,6 +42,7 @@ public class EncryptionManager {
     private EncryptionManagerStorage encryptionStore;
     private SecretKey mKey;
     private byte[] mSalt;
+    private WeakReference<EncryptionManagerListener> mEncryptionManagerListener;
 
     public EncryptionManager(EncryptionManagerStorage store) {
         encryptionStore = store;
@@ -50,13 +57,40 @@ public class EncryptionManager {
         PBEKeySpec spec = new PBEKeySpec(key, getSalt(), ITERATIONS, KEY_LENGTH);
         mKey = secretKeyFactory.generateSecret(spec);
         Arrays.fill(key, ' ');
+        notifyUnlocked();
     }
 
     private SecretKeySpec getKey() throws EncryptionManagerNeedsKeyException {
-        if(!hasKey())
-            throw new EncryptionManagerNeedsKeyException();
-
+        if(!hasKey()) throw new EncryptionManagerNeedsKeyException();
         return new SecretKeySpec(mKey.getEncoded(), "AES");
+    }
+
+    public void setListener(EncryptionManagerListener listener) {
+        mEncryptionManagerListener = new WeakReference<EncryptionManagerListener>(listener);
+    }
+
+    private void notifyLocked() {
+        final EncryptionManagerListener listener;
+        if(mEncryptionManagerListener != null && (listener = mEncryptionManagerListener.get()) != null) {
+            listener.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    listener.onEncryptionManagerLocked();
+                }
+            });
+        }
+    }
+
+    private void notifyUnlocked() {
+        final EncryptionManagerListener listener;
+        if (mEncryptionManagerListener != null && (listener = mEncryptionManagerListener.get()) != null) {
+            listener.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    listener.onEncryptionManagerLocked();
+                }
+            });
+        }
     }
 
     /**
@@ -135,6 +169,7 @@ public class EncryptionManager {
 
     public void removeKey() {
         mKey = null;
+        notifyLocked();
     }
 
     public boolean hasKey() {
