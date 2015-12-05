@@ -177,7 +177,6 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
         char[] pwd = acct.getPassword(eManager);
         pwdView.setText(new String(pwd));
         Arrays.fill(pwd, ' ');
-        pwdView.setTag(R.id.pwd_show_tag, true);
     }
 
     private void toggleAccountPwd(final View view, final Account acct) {
@@ -186,7 +185,6 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
             TextView pwdView = ((TextView)view.findViewById(R.id.textPass));
             if(acct.getShouldShowPass()) {
                 pwdView.setText("*****");
-                pwdView.setTag(R.id.pwd_show_tag, false);
                 acct.setShouldShowPass(false);
             } else {
                 showPass(pwdView, acct);
