@@ -83,8 +83,18 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
                 }
                 Account currAcct = mAccountList.get(i);
                 ((TextView) view.findViewById(R.id.textName)).setText(currAcct.getName());
-                ((TextView) view.findViewById(R.id.textPass)).setText("*****");
-                view.findViewById(R.id.textPass).setTag(R.id.pwd_show_tag, false);
+                TextView pwdView = ((TextView) view.findViewById(R.id.textPass));
+                if(currAcct.getShouldShowPass()) {
+                    try {
+                        showPass(pwdView, currAcct);
+                    } catch(GeneralSecurityException e) {
+                        Logger.d("Something went wrong!");
+                    } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
+                        Logger.d("Something went wrong!");
+                    }
+                } else {
+                    ((TextView) view.findViewById(R.id.textPass)).setText("*****");
+                }
                 return view;
             }
         };
@@ -163,18 +173,24 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
         return hasLoaded;
     }
 
+    private void showPass(final TextView pwdView, final Account acct) throws GeneralSecurityException, EncryptionManager.EncryptionManagerNeedsKeyException{
+        char[] pwd = acct.getPassword(eManager);
+        pwdView.setText(new String(pwd));
+        Arrays.fill(pwd, ' ');
+        pwdView.setTag(R.id.pwd_show_tag, true);
+    }
+
     private void toggleAccountPwd(final View view, final Account acct) {
         Logger.t();
         try {
             TextView pwdView = ((TextView)view.findViewById(R.id.textPass));
-            if(pwdView.getTag(R.id.pwd_show_tag) == false) {
-                char[] pwd = acct.getPassword(eManager);
-                pwdView.setText(new String(pwd));
-                Arrays.fill(pwd, ' ');
-                pwdView.setTag(R.id.pwd_show_tag, true);
-            } else {
+            if(acct.getShouldShowPass()) {
                 pwdView.setText("*****");
                 pwdView.setTag(R.id.pwd_show_tag, false);
+                acct.setShouldShowPass(false);
+            } else {
+                showPass(pwdView, acct);
+                acct.setShouldShowPass(true);
             }
             //mListViewAdapter.notifyDataSetChanged();
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
@@ -186,6 +202,12 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
         } catch (GeneralSecurityException e) {
             showAlertMessage("Encryption failure.");
         }
+    }
+
+    private void hideAllPasswords() {
+        for(Account acct: mAccountList)
+            acct.setShouldShowPass(false);
+        mListViewAdapter.notifyDataSetChanged();
     }
 
     private void displayAddNewAccount() {
@@ -222,5 +244,6 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
     @Override
     public void onEncryptionManagerLocked() {
         mLockMenuItem.setIcon(R.drawable.ic_lock_outline_white_24dp);
+        hideAllPasswords();
     }
 }

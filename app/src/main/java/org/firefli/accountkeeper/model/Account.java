@@ -16,6 +16,7 @@ public class Account implements Parcelable {
 
     private String name;
     private byte[] ePass;
+    private boolean showPass;
 
     public Account() {}
 
@@ -57,6 +58,14 @@ public class Account implements Parcelable {
 
     public void setRawPwd(byte[] rawPwd) {
         ePass = rawPwd;
+    }
+
+    public boolean getShouldShowPass() {
+        return this.showPass;
+    }
+
+    public void setShouldShowPass(boolean shouldShowPass) {
+        this.showPass = shouldShowPass;
     }
 
     @Override

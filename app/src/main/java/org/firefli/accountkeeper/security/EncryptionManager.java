@@ -87,7 +87,7 @@ public class EncryptionManager {
             listener.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    listener.onEncryptionManagerLocked();
+                    listener.onEncryptionManagerUnlocked();
                 }
             });
         }
