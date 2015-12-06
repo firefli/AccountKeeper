@@ -38,6 +38,8 @@ public class BaseActivity extends Activity implements EnterPasswordDialog.EnterP
     private void initObjects() {
         if(eManager == null) {
             eManager = new EncryptionManager(new EncryptionStore(this));
+            if(BuildConfig.DEBUG)
+                eManager.setOpenLockLength(10 * 1000);
         }
     }
 

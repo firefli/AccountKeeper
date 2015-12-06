@@ -10,6 +10,9 @@ import java.nio.charset.Charset;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -36,6 +39,7 @@ public class EncryptionManager {
 
     private static int KEY_LENGTH = 256;
     private static int ITERATIONS = 10000;
+    private static int DEFAULT_UNLOCK_TIME = 5 * 60 * 1000;  // 5 minutes
     private static final int BLOCK_SIZE = 16;
     private static final int IV_LENGTH = BLOCK_SIZE;
 
@@ -43,9 +47,12 @@ public class EncryptionManager {
     private SecretKey mKey;
     private byte[] mSalt;
     private WeakReference<EncryptionManagerListener> mEncryptionManagerListener;
+    private long unlockLength;
+    private Timer lockTimer;
 
     public EncryptionManager(EncryptionManagerStorage store) {
         encryptionStore = store;
+        unlockLength = DEFAULT_UNLOCK_TIME;
     }
 
     /**
@@ -56,8 +63,23 @@ public class EncryptionManager {
         SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
         PBEKeySpec spec = new PBEKeySpec(key, getSalt(), ITERATIONS, KEY_LENGTH);
         mKey = secretKeyFactory.generateSecret(spec);
+        startUnlockTimer();
         Arrays.fill(key, ' ');
         notifyUnlocked();
+    }
+
+    public void removeKey() {
+        mKey = null;
+        lockTimer.cancel();
+        notifyLocked();
+    }
+
+    public boolean hasKey() {
+        return mKey != null;
+    }
+
+    public void setOpenLockLength(long time) {
+        this.unlockLength = time;
     }
 
     private SecretKeySpec getKey() throws EncryptionManagerNeedsKeyException {
@@ -167,13 +189,14 @@ public class EncryptionManager {
         return salt;
     }
 
-    public void removeKey() {
-        mKey = null;
-        notifyLocked();
-    }
-
-    public boolean hasKey() {
-        return mKey != null;
+    public void startUnlockTimer() {
+        lockTimer = new Timer();
+        lockTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                removeKey();
+            }
+        }, new Date(System.currentTimeMillis() + unlockLength));
     }
 
     //
