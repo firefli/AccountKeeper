@@ -11,7 +11,8 @@ import org.firefli.accountkeeper.model.DefaultAccount;
 import org.firefli.accountkeeper.security.EncryptionManager;
 import org.firefli.accountkeeper.store.AccountStore;
 import org.firefli.accountkeeper.store.EncryptionStore;
-import org.firefli.accountkeeper.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.GeneralSecurityException;
 
@@ -23,6 +24,8 @@ import java.security.GeneralSecurityException;
  * Created by firefli on 8/29/15.
  */
 public class BaseActivity extends Activity implements EnterPasswordDialog.EnterPasswordDialogListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(BaseActivity.class);
 
     // Shared encryption manager across all BaseActivity.
     protected static EncryptionManager eManager;
@@ -52,7 +55,7 @@ public class BaseActivity extends Activity implements EnterPasswordDialog.EnterP
     }
 
     protected void showPwdDialog(Runnable onPwdRetun) {
-        Logger.t();
+        logger.trace("");
         this.onPwdReturn = onPwdRetun;
         FragmentManager fm = getFragmentManager();
         EnterPasswordDialog pwdDialog = new EnterPasswordDialog();
@@ -89,7 +92,7 @@ public class BaseActivity extends Activity implements EnterPasswordDialog.EnterP
                 if(defAccount != null)
                     success = defAccount.unlock(eManager);
             } catch (GeneralSecurityException e) {
-                Logger.d(e.getMessage());
+                logger.debug(e.getMessage());
             } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
                 // Impossible as this is the test subsequent to setting a key.
                 throw new RuntimeException(e);

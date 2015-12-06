@@ -16,7 +16,8 @@ import org.firefli.accountkeeper.model.Account;
 import org.firefli.accountkeeper.model.DefaultAccount;
 import org.firefli.accountkeeper.security.EncryptionManager;
 import org.firefli.accountkeeper.store.AccountStore;
-import org.firefli.accountkeeper.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
@@ -26,7 +27,8 @@ import java.util.List;
 
 public class MainActivity extends BaseActivity implements EncryptionManager.EncryptionManagerListener {
 
-    private static final String LOG_TAG = "MainActivity";
+    private static final Logger logger = LoggerFactory.getLogger(MainActivity.class);
+
     private static final int ADD_ACCOUNT_REQ_CODE = 0;
 
     private AccountStore mAccountStore;
@@ -88,9 +90,9 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
                     try {
                         showPass(pwdView, currAcct);
                     } catch(GeneralSecurityException e) {
-                        Logger.d("Something went wrong!");
+                        logger.error("Something went wrong!");
                     } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
-                        Logger.d("Something went wrong!");
+                        logger.error("Something went wrong!");
                     }
                 } else {
                     ((TextView) view.findViewById(R.id.textPass)).setText("*****");
@@ -149,7 +151,7 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
     }
 
     private boolean loadAccounts() {
-        Logger.t();
+        logger.trace("");
         boolean hasLoaded = false;
         try {
             mAccountList.addAll(new AccountStore(this, eManager).pull());
@@ -162,7 +164,7 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
             mListViewAdapter.notifyDataSetChanged();
             hasLoaded = true;
         } catch (GeneralSecurityException e) {
-            Logger.d(e.getMessage());
+            logger.debug(e.getMessage());
         } catch (EncryptionManager.EncryptionManagerNeedsKeyException e) {
             showPwdDialog(new Runnable() {
                 public void run() {
@@ -180,7 +182,7 @@ public class MainActivity extends BaseActivity implements EncryptionManager.Encr
     }
 
     private void toggleAccountPwd(final View view, final Account acct) {
-        Logger.t();
+        logger.trace("");
         try {
             TextView pwdView = ((TextView)view.findViewById(R.id.textPass));
             if(acct.getShouldShowPass()) {

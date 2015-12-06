@@ -3,7 +3,7 @@ package org.firefli.accountkeeper.util;
 import android.os.Build;
 
 /**
- * Created by Kyle on 12/5/2015.
+ * Created by firefli on 12/5/2015.
  */
 public class Util {
 
