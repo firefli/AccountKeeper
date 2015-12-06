@@ -35,6 +35,14 @@ public class BaseActivity extends Activity implements EnterPasswordDialog.EnterP
         initObjects();
     }
 
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if(level == TRIM_MEMORY_UI_HIDDEN) {
+            eManager.removeKey();
+        }
+    }
+
     private void initObjects() {
         if(eManager == null) {
             eManager = new EncryptionManager(new EncryptionStore(this));
